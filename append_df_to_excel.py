@@ -67,29 +67,3 @@ def append_df_to_excel(filename, df, sheet_name='Sheet1', startrow=None,
     # save the workbook
     writer.save()
 
-
-# if __name__ == '__main__':
-# #     xl_path = 'E:/BI/DBS reconc/dataset_inventory_gap_analysis.xlsx'
-# #     snap_path = 'E:/BI/DBS reconc/data_snapshot date_06.05.xlsx'
-# #
-# #     datafildes = ['MFG Part#', 'Region', 'OH Qty', 'Cluster', 'Program.1', 'Location', 'IPN', 'SysCost($)',
-# #                   'Last Refresh Date']
-# #     datafildes2 = ['MFG Part#', 'Region', 'OH Qty', 'Cluster', 'Program', 'Location', 'IPN', 'SysCost($)',
-# #                    'Last Refresh Date']
-# #     hyve_df = pd.read_excel(snap_path, sheet_name='Hyve OH INV')
-# #     hyve_df = hyve_df[datafildes]
-# #     hyve_df.columns = datafildes2
-# #     dbs_df = pd.read_excel(snap_path, sheet_name='DBS OH INV')
-# #     dbs_df = dbs_df[datafildes2]
-# #     print('concat new dateframe...')
-# #     oh_df = pd.concat([hyve_df, dbs_df], axis=0, ignore_index=True, sort=False)
-# #     oh_df['OH Qty'].astype('int')
-# #     oh_df['SysCost($)'].astype('float')
-# #     total_oh_df = pd.read_excel(xl_path, sheet_name='Total_OH_INV')
-# #     rows = total_oh_df['MFG Part#'].count()
-# #     print('append data to excel...')
-# #     try:
-# #         append_df_to_excel(xl_path, oh_df, sheet_name='Total_OH_INV', index=False, startrow=rows + 1, startcol=0)
-# #         print('****Successfully append data to excel!')
-# #     except Exception as e:
-# #         print('****Something wrong when appending data, error message:{}'.format(e))
