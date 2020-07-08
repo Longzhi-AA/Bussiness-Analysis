@@ -87,7 +87,6 @@ def get_progress(x, y, z, r):
         a = 'Slipped'
     return a
 
-
 # step 1: refresh data_TAM
 def process_data_TAM(data_path, pos_path, customer_path):
     cust_feilds = ['cust_no', 'cust_name', 'division', 'division_desc', 'cust_type', 'cust_type_descr',
@@ -119,8 +118,8 @@ def process_data_TAM(data_path, pos_path, customer_path):
     tam_df['Ref-MCN'] = tam_df['Vend Name'] + '-' + tam_df['MCN#']
     tam_df['Ref-CMCN'] = tam_df['Vend Name'] + '-' + tam_df['Credit MCN']
     tam_df['Ref-reseller name'] = tam_df['Vend Name'] + '-' + tam_df['Grouping Name']
-    date = datetime.date.today()
-    tam_df.to_excel('data_tam_{}.xlsx'.format(date), index=False, sheet_name='data_TAM')
+    # date = datetime.date.today()
+    tam_df.to_excel('data_TAM.xlsx', index=False, sheet_name='data_TAM')
     print('''---------------------------------
     *********Done! Successfuly proceeded data_TAM!*******''')
 
@@ -161,6 +160,14 @@ def process_data_sales(data_path, pos_path, customer_path):
     pivot_pos['Vend Name'] = pivot_pos['Ref'].str.split('-', 1).str[0]
     pivot_pos['MCN#'] = pivot_pos['Ref'].str.split('-', 1).str[1]
 
+    col_list = []
+    for col in pivot_pos.columns:
+        if '00:00:00' in str(col):
+            new_col = str(col).split(' ')[0][:7]
+            col_list.append(new_col)
+        else:
+            col_list.append(col)
+    pivot_pos.columns = col_list
     print('Append data to data_Sales.......')
     data_sales_df = pd.merge(data_sales_df, pivot_pos, on=['Ref', 'Vend Name', 'MCN#'], how='outer')
     for i in data_sales_df.columns:
@@ -168,20 +175,15 @@ def process_data_sales(data_path, pos_path, customer_path):
             data_sales_df = data_sales_df.drop(columns=i)
         elif '_y' in str(i):
             data_sales_df = data_sales_df.rename(columns={i: str(i).split('_')[0]})
-    col_list = []
+    months = []
     for col in data_sales_df.columns:
-        if '00:00:00' in str(col):
-            new_col = str(col).split(' ')[0][:7]
-            col_list.append(new_col)
-        else:
-            col_list.append(col)
-    data_sales_df.columns = col_list
-    date = datetime.date.today()
-    data_sales_df.to_excel('data_sales_{}.xlsx'.format(date), index=False, sheet_name='data_Sales')
+        months.append(col)
+    # date = datetime.date.today()
+    data_sales_df.to_excel('data_sales.xlsx', index=False, sheet_name='data_Sales')
     print('''---------------------------------
     *********Done! Successfuly proceeded data_Sales!*******''')
 
-    return data_sales_df, col_list[3:]
+    return data_sales_df, months[3:]
 
 
 # step 3: refresh data table
@@ -196,14 +198,15 @@ def process_data(data_path, pos_path, customer_path):
                                        sheet_name='Target reseller list',
                                        dtype={'MCN#': 'str'}
                                        )
-    sales_division = pd.read_excel('/Users/longzhi/Projects/BI_download/Canada Report/sales division.xlsx',
+    sales_division = pd.read_excel('E:/Projects\BI/CA report/07.08/sales division.xlsx',
                                    dtype={'Sales Division ID': 'str'})
-    sales_group = pd.read_excel('/Users/longzhi/Projects/BI_download/Canada Report/sales group.xlsx',
+    sales_group = pd.read_excel('E:/Projects/BI/CA report/07.08/sales group.xlsx',
                                 dtype={'Sales Group ID': 'str'})
     Target_reseller_df['Ref'] = Target_reseller_df['Vend Name'] + '-' + Target_reseller_df['MCN#']
     Target_reseller_df = Target_reseller_df.drop(columns=['REF', 'Vend Name', 'MCN#'])
     tam_df, cust_dataset_df = process_data_TAM(data_path, pos_path, customer_path)
     data_sales_df, months = process_data_sales(data_path, pos_path, customer_path)
+    print('start processing data..........')
     cust_df = pd.DataFrame()
     cust_df['MCN#'] = cust_dataset_df['mcust_no'].astype('str')
     cust_df['Reseller'] = cust_dataset_df['mcust_name']
@@ -280,7 +283,7 @@ def process_data(data_path, pos_path, customer_path):
     data['Last year (SNX FY 2019)'] = data['Q1_2019'] + data['Q2_2019'] + data['Q3_2019'] + data['Q4_2019']
     start_date = datetime.date(2019, 12, 1)
     days = (datetime.date.today() - start_date).days
-    data['RunRate(SNX FY2020)'] = data['YTD(SNX Fiscal)'] * days / 365
+    data['RunRate(SNX FY2020)'] = data['YTD(SNX Fiscal)'] / (days-2) * 365
     data['AvgSales(By SNX FiscalYear)'] = (data['Q1_2017'] + data['Q2_2017'] + data['Q3_2017']
                                            + data['Q4_2017'] + data['Q1_2018'] + data['Q2_2018'] + data['Q3_2018'] +
                                            data['Q4_2018']
@@ -315,7 +318,7 @@ def process_data(data_path, pos_path, customer_path):
     data['buying customer in {},2019'.format(cur_quarter.split('_')[0])][
         data[data[cur_quarter_lastyear] == 0].index] = 0
     data['buying customer in {}, 2020'.format(month_name)] = data['MCN#']
-    data['buying customer in {}, 2020'.format(month_name)][data[data['MoM %'] == 0].index] = 0
+    data['buying customer in {}, 2020'.format(month_name)][data[data[cur_month] == 0].index] = 0
     data['buying customer in {},2020'.format(cur_quarter.split('_')[0])] = data['MCN#']
     data['buying customer in {},2020'.format(cur_quarter.split('_')[0])][data[data['QTD'] == 0].index] = 0
     data['buying vendor in 2019'] = data['Vend Name']
@@ -323,7 +326,7 @@ def process_data(data_path, pos_path, customer_path):
     data['buying vendor in 2019'][data[data['Last year (SNX FY 2019)'] == 0].index] = 0
     data['buying vendor in 2020'][data[data['YTD(SNX Fiscal)'] == 0].index] = 0
     data['Left Period'] = None
-    data['Prior Period'] = None
+    data['Right Period'] = None
 
     data['Progress'] = ''
     for i in range(data['Ref'].count()):
@@ -331,14 +334,83 @@ def process_data(data_path, pos_path, customer_path):
                                 data['AvgSales(By SNX FiscalYear)'][i], data['RunRate(SNX FY2020)'][i])
         data['Progress'][i] = progress
 
-    data.to_excel('DATA.xlsx', sheet_name='DATA', index=False)
-    # print(data[:5])
+    print('working on generating new_data..........')
+    new_date = pd.DataFrame()
+    new_date['Progress'] = data['Progress']
+    new_date['Vend Name'] = data['Vend Name']
+    new_date['Partner level'] = data['Partner level']
+    new_date['MCN#'] = data['MCN#']
+    new_date['Reseller'] = data['Reseller']
+    new_date['Terr#'] = data['Terr#']
+    new_date['Sales Group'] = data['Sales Group']
+    new_date['Sales Division'] = data['Sales Division']
+    new_date['BD Project#'] = data['BD Project#']
+    new_date['Target project#'] = data['Target project#']
+    new_date['BD Rep'] = data['BD Rep']
+    new_date['Has BD Coverage?'] = data['Has BD Coverage?']
+    new_date['Has existed on Target reseller list?'] = data['Has existed on Target reseller list?']
+    new_date['Revenue Requirements (Annual)'] = data['Revenue Requirements (Annual)']
+    new_date['Revenue Requirements (Qtr)'] = data['Revenue Requirements (Qtr)']
+    new_date['SNX Annnual Oppty$ (2020)'] = data['SNX Annnual Oppty$ (2020)']
+    new_date['SNX FQ3 Oppty$'] = data['SNX FQ3 Oppty$']
+    new_date['QTD'] = data['QTD']
+    new_date['MTD Rev$'] = data['MTD Rev$']
+    new_date['MoM %'] = data['MoM %']
+    new_date[sales1] = data[sales1]
+    new_date[sales2] = data[sales2]
+    new_date[sales3] = data[sales3]
+    new_date['Total sales in {} 2019'.format(cur_quarter.split('_')[0])] = data[
+        'Total sales in {} 2019'.format(cur_quarter.split('_')[0])]
+    new_date['YTD(SNX Fiscal)'] = data['YTD(SNX Fiscal)']
+    new_date['Last year (SNX FY 2019)'] = data['Last year (SNX FY 2019)']
+    new_date['RunRate(SNX FY2020)'] = data['RunRate(SNX FY2020)']
+    new_date['AvgSales(By SNX FiscalYear)'] = data['AvgSales(By SNX FiscalYear)']
+    new_date['Sales Division ID'] = data['Sales Division ID']
+    new_date['Sales Group ID'] = data['Sales Group ID']
+    new_date['Ref for Co'] = data['Ref for Co']
+    new_date['buying customer in {}, 2019'.format(month_name)] = data['buying customer in {}, 2019'.format(month_name)]
+    new_date['buying customer in {},2019'.format(cur_quarter.split('_')[0])] = data[
+        'buying customer in {},2019'.format(cur_quarter.split('_')[0])]
+    new_date['buying customer in {}, 2020'.format(month_name)] = data['buying customer in {}, 2020'.format(month_name)]
+    new_date['buying customer in {},2020'.format(cur_quarter.split('_')[0])] = data[
+        'buying customer in {},2020'.format(cur_quarter.split('_')[0])]
+    new_date['buying vendor in 2019'] = data['buying vendor in 2019']
+    new_date['buying vendor in 2020'] = data['buying vendor in 2020']
+    for month in months:
+        new_date[month] = data[month]
+    new_date['Q1_2017'] = data['Q1_2017']
+    new_date['Q2_2017'] = data['Q2_2017']
+    new_date['Q3_2017'] = data['Q3_2017']
+    new_date['Q4_2017'] = data['Q4_2017']
+    new_date['Q1_2018'] = data['Q1_2018']
+    new_date['Q2_2018'] = data['Q2_2018']
+    new_date['Q3_2018'] = data['Q3_2018']
+    new_date['Q4_2018'] = data['Q4_2018']
+    new_date['Q1_2019'] = data['Q1_2019']
+    new_date['Q2_2019'] = data['Q2_2019']
+    new_date['Q3_2019'] = data['Q3_2019']
+    new_date['Q4_2019'] = data['Q4_2019']
+    new_date['Q1_2020'] = data['Q1_2020']
+    new_date['Q2_2020'] = data['Q2_2020']
+    try:
+        new_date['Q3_2020'] = data['Q3_2020']
+    except:
+        new_date['Q3_2020'] = None
+    try:
+        new_date['Q4_2020'] = data['Q4_2020']
+    except:
+        new_date['Q4_2020'] = None
+    new_date['Left Period'] = data['Left Period']
+    new_date['Right Period'] = data['Right Period']
+
+    print('working on export data to excel.............')
+    new_date.to_excel('DATA.xlsx', sheet_name='DATA', index=False)
 
 
 if __name__ == '__main__':
-    data_path = 'E:/Projects/BI/CA report/Canada Cross sell and TAM growth updated as of 0622_new.xlsx'
-    pos_path = '/Users/longzhi/Projects/BI_download/Canada Report/POS_Online_Report_6.29.xlsx'
-    customer_path = '/Users/longzhi/Projects/BI_download/Canada Report/customer dataset_6.29.xlsx'
-    new_data_path = 'E:/Projects/BI/CA report/Canada Cross sell and TAM growth updated as of 0629.xlsx'
+    data_path = 'E:\Projects\BI\CA report\Canada Cross sell and TAM growth updated as of 0629.xlsx'
+    pos_path = 'E:/Projects/BI/CA report/07.08/POS_Online_Report.xlsx'
+    customer_path = 'E:/Projects/BI/CA report/07.08/data - 2020-07-06T091741.390.xlsx'
+
 
     process_data(data_path, pos_path, customer_path)
