@@ -75,17 +75,22 @@ def get_quarters(cur_quarter):
 
 
 def get_progress(x, y, z, r):
+    # data['YTD(SNX Fiscal)'] data['Last year (SNX FY 2019)'],
+    # data['AvgSales(By SNX FiscalYear)'], data['RunRate(SNX FY2020)']
+
     if x > 0 and y == 0 and z == 0:
         a = 'New'
     elif x > 0 and y == 0 and z > 0:
         a = 'Win-Back'
     elif x == 0 and y == 0 and z == 0:
         a = 'Oppty'
-    elif x > 0 and y >= 0 and z >= 0 and r >= z:
+    # elif x > 0 and y >= 0 and z >= 0 and r >= z:
+    elif x > 0 and r >= z:
         a = 'Existing'
     else:
         a = 'Slipped'
     return a
+
 
 # step 1: refresh data_TAM
 def process_data_TAM(data_path, pos_path, customer_path):
@@ -127,7 +132,7 @@ def process_data_TAM(data_path, pos_path, customer_path):
 
 
 # step 2: refresh data_Sales
-def process_data_sales(data_path, pos_path, customer_path):
+def process_data_sales(data_path, pos_path, customer_data):
     print('Loading data Sales ......')
     data_sales_df = pd.read_excel(data_path,
                                   sheet_name='data_Sales',
@@ -178,7 +183,7 @@ def process_data_sales(data_path, pos_path, customer_path):
     months = []
     for col in data_sales_df.columns:
         months.append(col)
-    # date = datetime.date.today()
+
     data_sales_df.to_excel('data_sales.xlsx', index=False, sheet_name='data_Sales')
     print('''---------------------------------
     *********Done! Successfuly proceeded data_Sales!*******''')
@@ -187,25 +192,24 @@ def process_data_sales(data_path, pos_path, customer_path):
 
 
 # step 3: refresh data table
-
-def process_data(data_path, pos_path, customer_path):
+def process_data(data_path, pos_path, customer_path, sales_division, sales_group):
     bd_project_df = pd.read_excel(data_path,
                                   sheet_name='BD project info',
                                   usecols=['Ref', 'BD Project#', 'Target project#', 'BD Rep', 'Has BD Coverage?'],
                                   dtype={'MCN#': 'str', 'BD Project#': 'str', 'Target project#': 'str'}
                                   )
-    Target_reseller_df = pd.read_excel(data_path,
+    target_reseller_df = pd.read_excel(data_path,
                                        sheet_name='Target reseller list',
                                        dtype={'MCN#': 'str'}
                                        )
-    sales_division = pd.read_excel('E:/Projects\BI/CA report/07.08/sales division.xlsx',
+    sales_division = pd.read_excel(sales_division,
                                    dtype={'Sales Division ID': 'str'})
-    sales_group = pd.read_excel('E:/Projects/BI/CA report/07.08/sales group.xlsx',
+    sales_group = pd.read_excel(sales_group,
                                 dtype={'Sales Group ID': 'str'})
-    Target_reseller_df['Ref'] = Target_reseller_df['Vend Name'] + '-' + Target_reseller_df['MCN#']
-    Target_reseller_df = Target_reseller_df.drop(columns=['REF', 'Vend Name', 'MCN#'])
+    target_reseller_df['Ref'] = target_reseller_df['Vend Name'] + '-' + target_reseller_df['MCN#']
+    target_reseller_df = target_reseller_df.drop(columns=['REF', 'Vend Name', 'MCN#'])
     tam_df, cust_dataset_df = process_data_TAM(data_path, pos_path, customer_path)
-    data_sales_df, months = process_data_sales(data_path, pos_path, customer_path)
+    data_sales_df, months = process_data_sales(data_path, pos_path, cust_dataset_df)
     print('start processing data..........')
     cust_df = pd.DataFrame()
     cust_df['MCN#'] = cust_dataset_df['mcust_no'].astype('str')
@@ -231,7 +235,7 @@ def process_data(data_path, pos_path, customer_path):
     partner_level['Ref'] = tam_df['Ref-MCN']
     partner_level['Partner level'] = tam_df['Partner level']
     partner_level['Partner level'] = partner_level['Partner level'].fillna('(blank)')
-    partner_level = partner_level.drop_duplicates()  # Q: parnter level 为空可否去掉（blank)直接表示为空
+    partner_level = partner_level.drop_duplicates()
     data1 = pd.DataFrame()
     data2 = pd.DataFrame()
     data1['Ref'] = tam_df['Ref-MCN']
@@ -246,8 +250,21 @@ def process_data(data_path, pos_path, customer_path):
     data = data.drop_duplicates()
     data = pd.merge(data, normlize_ref(partner_level), on='Ref', how='left', validate='1:1')
     data = pd.merge(data, normlize_ref(cust_temp), on='MCN#', how='left', validate='m:1')
+    data = data.drop(columns=['Reseller'])
+    cust1 = pd.DataFrame()
+    cust2 = pd.DataFrame()
+    cust1['MCN#'] = cust_dataset_df['mcust_no']
+    cust1['Credit MCN#'] = cust_dataset_df['credit_master_acct']
+    cust1 = cust1.drop_duplicates(subset='MCN#')
+    cust2['cust_no'] = cust_dataset_df['cust_no']
+    cust2['Reseller'] = cust_dataset_df['cust_name']
+    cust2 = cust2.drop_duplicates(subset='cust_no')
+    data = pd.merge(data, cust1, how='left', on='MCN#', validate='m:1')
+    data = pd.merge(data, cust2, how='left', left_on='Credit MCN#', right_on='cust_no', validate='m:1')
+    data = data.drop(columns=['cust_no'])
+
     data = pd.merge(data, normlize_ref(bd_project_df), on='Ref', how='left', validate='1:1')
-    data = pd.merge(data, normlize_ref(Target_reseller_df), on='Ref', how='left', validate='1:1')
+    data = pd.merge(data, normlize_ref(target_reseller_df), on='Ref', how='left', validate='1:1')
     data['Has BD Coverage?'] = data['Has BD Coverage?'].fillna('No')
     data['Has existed on Target reseller list?'] = data['Has existed on Target reseller list?'].fillna('No')
     simplfied_tam_df = pd.DataFrame()
@@ -283,7 +300,7 @@ def process_data(data_path, pos_path, customer_path):
     data['Last year (SNX FY 2019)'] = data['Q1_2019'] + data['Q2_2019'] + data['Q3_2019'] + data['Q4_2019']
     start_date = datetime.date(2019, 12, 1)
     days = (datetime.date.today() - start_date).days
-    data['RunRate(SNX FY2020)'] = data['YTD(SNX Fiscal)'] / (days-2) * 365
+    data['RunRate(SNX FY2020)'] = data['YTD(SNX Fiscal)'] / (days - 1) * 365
     data['AvgSales(By SNX FiscalYear)'] = (data['Q1_2017'] + data['Q2_2017'] + data['Q3_2017']
                                            + data['Q4_2017'] + data['Q1_2018'] + data['Q2_2018'] + data['Q3_2018'] +
                                            data['Q4_2018']
@@ -340,6 +357,7 @@ def process_data(data_path, pos_path, customer_path):
     new_date['Vend Name'] = data['Vend Name']
     new_date['Partner level'] = data['Partner level']
     new_date['MCN#'] = data['MCN#']
+    new_date['Credit MCN#'] = data['Credit MCN#']
     new_date['Reseller'] = data['Reseller']
     new_date['Terr#'] = data['Terr#']
     new_date['Sales Group'] = data['Sales Group']
@@ -367,7 +385,7 @@ def process_data(data_path, pos_path, customer_path):
     new_date['AvgSales(By SNX FiscalYear)'] = data['AvgSales(By SNX FiscalYear)']
     new_date['Sales Division ID'] = data['Sales Division ID']
     new_date['Sales Group ID'] = data['Sales Group ID']
-    new_date['Ref for Co'] = data['Ref for Co']
+
     new_date['buying customer in {}, 2019'.format(month_name)] = data['buying customer in {}, 2019'.format(month_name)]
     new_date['buying customer in {},2019'.format(cur_quarter.split('_')[0])] = data[
         'buying customer in {},2019'.format(cur_quarter.split('_')[0])]
@@ -400,6 +418,7 @@ def process_data(data_path, pos_path, customer_path):
         new_date['Q4_2020'] = data['Q4_2020']
     except:
         new_date['Q4_2020'] = None
+    new_date['Ref for Co'] = data['Ref for Co']
     new_date['Left Period'] = data['Left Period']
     new_date['Right Period'] = data['Right Period']
 
@@ -408,9 +427,10 @@ def process_data(data_path, pos_path, customer_path):
 
 
 if __name__ == '__main__':
-    data_path = 'E:\Projects\BI\CA report\Canada Cross sell and TAM growth updated as of 0629.xlsx'
-    pos_path = 'E:/Projects/BI/CA report/07.08/POS_Online_Report.xlsx'
-    customer_path = 'E:/Projects/BI/CA report/07.08/data - 2020-07-06T091741.390.xlsx'
+    sales_division = 'E:/Projects/BI/CA report/sales division.xlsx'
+    sales_group = 'E:/Projects/BI/CA report/sales group.xlsx'
+    data_path = 'E:/Projects/BI/CA report/07.13/Canada Cross sell and TAM growth updated as of 0708.xlsx'
+    pos_path = 'E:/Projects/BI/CA report/07.13/POS_Online_Report_7-13.xlsx'
+    customer_path = 'E:/Projects/BI/CA report/07.13/data - 2020-07-13.xlsx'
 
-
-    process_data(data_path, pos_path, customer_path)
+    process_data(data_path, pos_path, customer_path, sales_division, sales_group)
