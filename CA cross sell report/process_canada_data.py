@@ -124,7 +124,7 @@ def process_data_TAM(data_path, pos_path, customer_path):
     tam_df['Ref-CMCN'] = tam_df['Vend Name'] + '-' + tam_df['Credit MCN']
     tam_df['Ref-reseller name'] = tam_df['Vend Name'] + '-' + tam_df['Grouping Name']
     # date = datetime.date.today()
-    tam_df.to_excel('data_TAM.xlsx', index=False, sheet_name='data_TAM')
+    tam_df.to_excel('data_TAM_{}.xlsx'.format(datetime.date.today()), index=False, sheet_name='data_TAM')
     print('''---------------------------------
     *********Done! Successfuly proceeded data_TAM!*******''')
 
@@ -184,7 +184,7 @@ def process_data_sales(data_path, pos_path, customer_data):
     for col in data_sales_df.columns:
         months.append(col)
 
-    data_sales_df.to_excel('data_sales.xlsx', index=False, sheet_name='data_Sales')
+    data_sales_df.to_excel('data_sales_{}.xlsx'.format(datetime.date.today()), index=False, sheet_name='data_Sales')
     print('''---------------------------------
     *********Done! Successfuly proceeded data_Sales!*******''')
 
@@ -344,93 +344,94 @@ def process_data(data_path, pos_path, customer_path, sales_division, sales_group
     data['buying vendor in 2020'][data[data['YTD(SNX Fiscal)'] == 0].index] = 0
     data['Left Period'] = None
     data['Right Period'] = None
-
-    data['Progress'] = ''
+    data['Progress'] = None
     for i in range(data['Ref'].count()):
         progress = get_progress(data['YTD(SNX Fiscal)'][i], data['Last year (SNX FY 2019)'][i],
                                 data['AvgSales(By SNX FiscalYear)'][i], data['RunRate(SNX FY2020)'][i])
         data['Progress'][i] = progress
 
     print('working on generating new_data..........')
-    new_date = pd.DataFrame()
-    new_date['Progress'] = data['Progress']
-    new_date['Vend Name'] = data['Vend Name']
-    new_date['Partner level'] = data['Partner level']
-    new_date['MCN#'] = data['MCN#']
-    new_date['Credit MCN#'] = data['Credit MCN#']
-    new_date['Reseller'] = data['Reseller']
-    new_date['Terr#'] = data['Terr#']
-    new_date['Sales Group'] = data['Sales Group']
-    new_date['Sales Division'] = data['Sales Division']
-    new_date['BD Project#'] = data['BD Project#']
-    new_date['Target project#'] = data['Target project#']
-    new_date['BD Rep'] = data['BD Rep']
-    new_date['Has BD Coverage?'] = data['Has BD Coverage?']
-    new_date['Has existed on Target reseller list?'] = data['Has existed on Target reseller list?']
-    new_date['Revenue Requirements (Annual)'] = data['Revenue Requirements (Annual)']
-    new_date['Revenue Requirements (Qtr)'] = data['Revenue Requirements (Qtr)']
-    new_date['SNX Annnual Oppty$ (2020)'] = data['SNX Annnual Oppty$ (2020)']
-    new_date['SNX FQ3 Oppty$'] = data['SNX FQ3 Oppty$']
-    new_date['QTD'] = data['QTD']
-    new_date['MTD Rev$'] = data['MTD Rev$']
-    new_date['MoM %'] = data['MoM %']
-    new_date[sales1] = data[sales1]
-    new_date[sales2] = data[sales2]
-    new_date[sales3] = data[sales3]
-    new_date['Total sales in {} 2019'.format(cur_quarter.split('_')[0])] = data[
+    #create new dataframe for ordering by manaul file
+    new_data = pd.DataFrame()
+    new_data['Progress'] = data['Progress']
+    new_data['Vend Name'] = data['Vend Name']
+    new_data['Partner level'] = data['Partner level']
+    new_data['MCN#'] = data['MCN#']
+    new_data['Credit MCN#'] = data['Credit MCN#']
+    new_data['Reseller'] = data['Reseller']
+    new_data['Terr#'] = data['Terr#']
+    new_data['Sales Group'] = data['Sales Group']
+    new_data['Sales Division'] = data['Sales Division']
+    new_data['BD Project#'] = data['BD Project#']
+    new_data['Target project#'] = data['Target project#']
+    new_data['BD Rep'] = data['BD Rep']
+    new_data['Has BD Coverage?'] = data['Has BD Coverage?']
+    new_data['Has existed on Target reseller list?'] = data['Has existed on Target reseller list?']
+    new_data['Revenue Requirements (Annual)'] = data['Revenue Requirements (Annual)']
+    new_data['Revenue Requirements (Qtr)'] = data['Revenue Requirements (Qtr)']
+    new_data['SNX Annnual Oppty$ (2020)'] = data['SNX Annnual Oppty$ (2020)']
+    new_data['SNX FQ3 Oppty$'] = data['SNX FQ3 Oppty$']
+    new_data['QTD'] = data['QTD']
+    new_data['MTD Rev$'] = data['MTD Rev$']
+    new_data['MoM %'] = data['MoM %']
+    new_data[sales1] = data[sales1]
+    new_data[sales2] = data[sales2]
+    new_data[sales3] = data[sales3]
+    new_data['Total sales in {} 2019'.format(cur_quarter.split('_')[0])] = data[
         'Total sales in {} 2019'.format(cur_quarter.split('_')[0])]
-    new_date['YTD(SNX Fiscal)'] = data['YTD(SNX Fiscal)']
-    new_date['Last year (SNX FY 2019)'] = data['Last year (SNX FY 2019)']
-    new_date['RunRate(SNX FY2020)'] = data['RunRate(SNX FY2020)']
-    new_date['AvgSales(By SNX FiscalYear)'] = data['AvgSales(By SNX FiscalYear)']
-    new_date['Sales Division ID'] = data['Sales Division ID']
-    new_date['Sales Group ID'] = data['Sales Group ID']
+    new_data['YTD(SNX Fiscal)'] = data['YTD(SNX Fiscal)']
+    new_data['Last year (SNX FY 2019)'] = data['Last year (SNX FY 2019)']
+    new_data['RunRate(SNX FY2020)'] = data['RunRate(SNX FY2020)']
+    new_data['AvgSales(By SNX FiscalYear)'] = data['AvgSales(By SNX FiscalYear)']
+    new_data['Sales Division ID'] = data['Sales Division ID']
+    new_data['Sales Group ID'] = data['Sales Group ID']
 
-    new_date['buying customer in {}, 2019'.format(month_name)] = data['buying customer in {}, 2019'.format(month_name)]
-    new_date['buying customer in {},2019'.format(cur_quarter.split('_')[0])] = data[
+    new_data['buying customer in {}, 2019'.format(month_name)] = data['buying customer in {}, 2019'.format(month_name)]
+    new_data['buying customer in {},2019'.format(cur_quarter.split('_')[0])] = data[
         'buying customer in {},2019'.format(cur_quarter.split('_')[0])]
-    new_date['buying customer in {}, 2020'.format(month_name)] = data['buying customer in {}, 2020'.format(month_name)]
-    new_date['buying customer in {},2020'.format(cur_quarter.split('_')[0])] = data[
+    new_data['buying customer in {}, 2020'.format(month_name)] = data['buying customer in {}, 2020'.format(month_name)]
+    new_data['buying customer in {},2020'.format(cur_quarter.split('_')[0])] = data[
         'buying customer in {},2020'.format(cur_quarter.split('_')[0])]
-    new_date['buying vendor in 2019'] = data['buying vendor in 2019']
-    new_date['buying vendor in 2020'] = data['buying vendor in 2020']
+    new_data['buying vendor in 2019'] = data['buying vendor in 2019']
+    new_data['buying vendor in 2020'] = data['buying vendor in 2020']
     for month in months:
-        new_date[month] = data[month]
-    new_date['Q1_2017'] = data['Q1_2017']
-    new_date['Q2_2017'] = data['Q2_2017']
-    new_date['Q3_2017'] = data['Q3_2017']
-    new_date['Q4_2017'] = data['Q4_2017']
-    new_date['Q1_2018'] = data['Q1_2018']
-    new_date['Q2_2018'] = data['Q2_2018']
-    new_date['Q3_2018'] = data['Q3_2018']
-    new_date['Q4_2018'] = data['Q4_2018']
-    new_date['Q1_2019'] = data['Q1_2019']
-    new_date['Q2_2019'] = data['Q2_2019']
-    new_date['Q3_2019'] = data['Q3_2019']
-    new_date['Q4_2019'] = data['Q4_2019']
-    new_date['Q1_2020'] = data['Q1_2020']
-    new_date['Q2_2020'] = data['Q2_2020']
+        new_data[month] = data[month]
+    new_data['Q1_2017'] = data['Q1_2017']
+    new_data['Q2_2017'] = data['Q2_2017']
+    new_data['Q3_2017'] = data['Q3_2017']
+    new_data['Q4_2017'] = data['Q4_2017']
+    new_data['Q1_2018'] = data['Q1_2018']
+    new_data['Q2_2018'] = data['Q2_2018']
+    new_data['Q3_2018'] = data['Q3_2018']
+    new_data['Q4_2018'] = data['Q4_2018']
+    new_data['Q1_2019'] = data['Q1_2019']
+    new_data['Q2_2019'] = data['Q2_2019']
+    new_data['Q3_2019'] = data['Q3_2019']
+    new_data['Q4_2019'] = data['Q4_2019']
+    new_data['Q1_2020'] = data['Q1_2020']
+    new_data['Q2_2020'] = data['Q2_2020']
     try:
-        new_date['Q3_2020'] = data['Q3_2020']
+        new_data['Q3_2020'] = data['Q3_2020']
     except:
-        new_date['Q3_2020'] = None
+        new_data['Q3_2020'] = None
     try:
-        new_date['Q4_2020'] = data['Q4_2020']
+        new_data['Q4_2020'] = data['Q4_2020']
     except:
-        new_date['Q4_2020'] = None
-    new_date['Ref for Co'] = data['Ref for Co']
-    new_date['Left Period'] = data['Left Period']
-    new_date['Right Period'] = data['Right Period']
+        new_data['Q4_2020'] = None
+    new_data['Ref for Co'] = data['Ref for Co']
+    new_data['Left Period'] = data['Left Period']
+    new_data['Right Period'] = data['Right Period']
 
     print('working on export data to excel.............')
-    new_date.to_excel('DATA.xlsx', sheet_name='DATA', index=False)
+    new_data.to_excel('DATA_{}.xlsx'.format(datetime.date.today()), sheet_name='DATA', index=False)
 
 
 if __name__ == '__main__':
     sales_division = 'E:/Projects/BI/CA report/sales division.xlsx'
     sales_group = 'E:/Projects/BI/CA report/sales group.xlsx'
-    data_path = 'E:/Projects/BI/CA report/07.13/Canada Cross sell and TAM growth updated as of 0708.xlsx'
-    pos_path = 'E:/Projects/BI/CA report/07.13/POS_Online_Report_7-13.xlsx'
-    customer_path = 'E:/Projects/BI/CA report/07.13/data - 2020-07-13.xlsx'
+
+    data_path = str(input('Hello, please input last dataset path(path to TAM/SALES) here:'))
+    pos_path = str(input('Hello, please input current POS path(path to POS) here:'))
+    customer_path = str(input('Hello, please input customer list path(path to customer list) here:'))
 
     process_data(data_path, pos_path, customer_path, sales_division, sales_group)
