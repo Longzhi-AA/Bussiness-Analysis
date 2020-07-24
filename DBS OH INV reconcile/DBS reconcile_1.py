@@ -3,7 +3,6 @@ import os, datetime
 
 app_time = datetime.date.today()
 
-
 def merge_csv(file_path, file_list, data_fileds):
     print('working on processing {}.......'.format(file_list[0]))
     df = pd.read_excel(file_path + '/' + file_list[0], skiprows=1)
@@ -26,7 +25,7 @@ def merge_csv(file_path, file_list, data_fileds):
         df = pd.concat([df, df2], axis=0, ignore_index=True, sort=False)
     df['Append_date'] = app_time
     df['AWS Sku'] = df['AWS Sku'].str[0:10]
-    # df.drop_duplicates()
+
     df.reset_index(drop=True)
     return df
 
